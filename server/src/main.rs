@@ -23,7 +23,6 @@ struct Problem {
 }
 
 fn read_contents(file_path: &Path) -> String {
-    dbg!(file_path);
     let file = File::open(file_path).expect("Unable to open file");
     let mut buf_reader = BufReader::new(file);
     let mut contents = String::new();
@@ -34,12 +33,32 @@ fn read_contents(file_path: &Path) -> String {
 #[get("/problem/<id>")]
 fn get(id: &str) -> Json<Problem> {
     let stmt_path = Path::new(DATASET_DIR).join(id).join("stmt.txt");
-    let problem = Problem {
+    let samples_dir = Path::new(DATASET_DIR).join(id).join("samples");
+
+    let mut sample_inputs = Vec::new();
+    let mut sample_outputs = Vec::new();
+
+    let mut samples_paths: Vec<_> = std::fs::read_dir(samples_dir)
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+    samples_paths.sort_by_key(|dir| dir.path());
+
+    for sample_path in samples_paths {
+        let path = sample_path.path();
+        let contents = read_contents(&path);
+        match path.display().to_string().split('.').last() {
+            Some("in") => sample_inputs.push(contents),
+            Some("out") => sample_outputs.push(contents),
+            _ => panic!(),
+        }
+    }
+
+    Json(Problem {
         statement: read_contents(&stmt_path),
-        sample_inputs: Vec::new(),
-        sample_outputs: Vec::new(),
-    };
-    Json(problem)
+        sample_inputs,
+        sample_outputs,
+    })
 }
 
 #[launch]
@@ -62,7 +81,13 @@ mod tests {
             .stdout
             .split(|ch| u8::to_string(ch) == "\n")
             .count();
-        // println!("Problems found: {}", problem_count);
         assert!(problem_count > 0);
+    }
+
+    #[test]
+    fn get_valid_problem() {
+        let resp = get("001");
+        assert!(resp.statement.len() > 0);
+        assert_eq!(resp.sample_inputs.len(), resp.sample_outputs.len());
     }
 }
