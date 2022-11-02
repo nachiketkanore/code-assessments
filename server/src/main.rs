@@ -85,9 +85,16 @@ mod tests {
     }
 
     #[test]
-    fn get_valid_problem() {
-        let resp = get("001");
-        assert!(resp.statement.len() > 0);
-        assert_eq!(resp.sample_inputs.len(), resp.sample_outputs.len());
+    fn all_problems_validation() {
+        let paths = std::fs::read_dir(DATASET_DIR).unwrap();
+
+        for path in paths {
+            let problem_path = path.unwrap().path().display().to_string();
+            let name = problem_path.split('/').last().unwrap();
+            dbg!(&name);
+            let resp = get(&name);
+            assert!(resp.statement.len() > 0);
+            assert_eq!(resp.sample_inputs.len(), resp.sample_outputs.len());
+        }
     }
 }
