@@ -1,5 +1,11 @@
+mod execute;
+mod storage;
+
+use crate::execute::run_code;
+use crate::storage::store_code;
+use execute::ExecutionResult;
 use rocket::serde::json::Json;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -21,7 +27,6 @@ struct Problem {
     sample_inputs: Vec<String>,
     sample_outputs: Vec<String>,
 }
-
 fn read_contents(file_path: &Path) -> String {
     let file = File::open(file_path).expect("Unable to open file");
     let mut buf_reader = BufReader::new(file);
@@ -61,9 +66,28 @@ fn get(id: &str) -> Json<Problem> {
     })
 }
 
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum ProgrammingLanguage {
+    Cpp,
+    Python,
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct Solution {
+    problem_id: String,
+    code: String,
+    language: ProgrammingLanguage,
+}
+
+#[post("/execute", format = "json", data = "<user_input>")]
+fn execute_code_on_samples(user_input: Json<Solution>) -> Json<ExecutionResult> {
+    let file_path = store_code(&user_input.language, &user_input.code);
+    return run_code(user_input, &file_path.unwrap()).unwrap();
+}
+
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index, get])
+    rocket::build().mount("/", routes![index, get, execute_code_on_samples])
 }
 
 #[cfg(test)]
