@@ -13,3 +13,6 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 .idea
+
+# binaries generated while running the programs, maybe clean after usage? will do that later..
+execution/*

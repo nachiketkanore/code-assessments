@@ -21,7 +21,7 @@ fn index() -> &'static str {
     return "Welcome to code-assessments";
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct Problem {
     statement: String,
     sample_inputs: Vec<String>,
@@ -66,13 +66,13 @@ fn get(id: &str) -> Json<Problem> {
     })
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum ProgrammingLanguage {
     Cpp,
     Python,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Solution {
     problem_id: String,
     code: String,
@@ -82,11 +82,14 @@ pub struct Solution {
 #[post("/execute", format = "json", data = "<user_input>")]
 fn execute_code_on_samples(user_input: Json<Solution>) -> Json<ExecutionResult> {
     let file_path = store_code(&user_input.language, &user_input.code);
-    return run_code(user_input, &file_path.unwrap()).unwrap();
+    dbg!(&file_path);
+    return run_code(user_input, &file_path.unwrap()).expect("code running failed");
 }
 
 #[launch]
 fn rocket() -> _ {
+    let path = std::env::current_dir().unwrap();
+    dbg!("The current directory is {}", path.display());
     rocket::build().mount("/", routes![index, get, execute_code_on_samples])
 }
 
@@ -120,5 +123,32 @@ mod tests {
             assert!(resp.statement.len() > 0);
             assert_eq!(resp.sample_inputs.len(), resp.sample_outputs.len());
         }
+    }
+
+    #[test]
+    fn code_saving_and_reading() {
+        let code="#include<iostream>\n  int main() { int a, b; std::cin >> a >> b; std::cout << (a|b) << std::endl; return 0;}".to_string();
+        let language = ProgrammingLanguage::Cpp;
+        let code_path = store_code(&language, &code).unwrap();
+        let contents =
+            std::fs::read_to_string(code_path).expect("Unable to read the contents of file");
+        assert_eq!(code, contents);
+    }
+
+    #[test]
+    fn code_execution() {
+        // checks on problem `001` for successful compilation
+        // and expected outputs on running against samples
+        let submit = Solution {
+            problem_id: "001".to_string(),
+            code: "#include<iostream>\n  int main() { int a, b; std::cin >> a >> b; std::cout << (a|b) << std::endl; return 0;}".to_string(),
+            language: ProgrammingLanguage::Cpp
+        };
+
+        let code_path = store_code(&submit.language, &submit.code).unwrap();
+        let res = run_code(Json(submit), &code_path).unwrap().into_inner();
+
+        assert_eq!(res.errors.len(), 0);
+        assert_eq!(res.submission_outputs, res.outputs);
     }
 }
