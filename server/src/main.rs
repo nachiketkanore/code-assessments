@@ -1,7 +1,7 @@
 mod execute;
 mod storage;
 
-use crate::execute::run_code;
+use crate::execute::run_code_on_samples;
 use crate::storage::store_code;
 use execute::ExecutionResult;
 use rocket::serde::json::Json;
@@ -83,7 +83,7 @@ pub struct Solution {
 fn execute_code_on_samples(user_input: Json<Solution>) -> Json<ExecutionResult> {
     let file_path = store_code(&user_input.language, &user_input.code);
     dbg!(&file_path);
-    return run_code(user_input, &file_path.unwrap()).expect("code running failed");
+    return run_code_on_samples(user_input, &file_path.unwrap()).expect("code running failed");
 }
 
 #[launch]
@@ -146,7 +146,9 @@ mod tests {
         };
 
         let code_path = store_code(&submit.language, &submit.code).unwrap();
-        let res = run_code(Json(submit), &code_path).unwrap().into_inner();
+        let res = run_code_on_samples(Json(submit), &code_path)
+            .unwrap()
+            .into_inner();
 
         assert_eq!(res.errors.len(), 0);
         assert_eq!(res.submission_outputs, res.outputs);

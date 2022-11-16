@@ -18,7 +18,10 @@ pub struct ExecutionResult {
     pub errors: Vec<String>,
 }
 
-pub fn run_code(user_input: Json<Solution>, _file_path: &str) -> Result<Json<ExecutionResult>> {
+pub fn run_code_on_samples(
+    user_input: Json<Solution>,
+    _file_path: &str,
+) -> Result<Json<ExecutionResult>> {
     let _cmd_cpp_run = format!("{}/main", EXECUTION_DIR);
 
     let problem = get(&user_input.problem_id);
